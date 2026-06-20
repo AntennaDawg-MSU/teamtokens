@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Tokens — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <span class="brand">🪙 Team Tokens — Admin</span>
+  <span class="user-info" id="header-role"></span>
+  <button class="btn-logout" id="logout-btn">Sign Out</button>
+</header>
+
+<div class="page-wrap">
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="import">📥 Import CSV</button>
+    <button class="tab-btn" data-tab="manage">✏️ Manage Records</button>
+    <button class="tab-btn" data-tab="reports">📊 Reports</button>
+    <button class="tab-btn" data-tab="assignments">📅 Assignments</button>
+  </div>
+
+  <!-- ── Tab: Import ─────────────────────────────────────────────────── -->
+  <div id="tab-import">
+    <div class="card">
+      <h2>Import Student Roster</h2>
+      <p class="text-sub" style="margin-bottom:.75rem">
+        CSV columns: <code>name, netid, team_number</code>
+      </p>
+      <input type="file" id="import-students-file" accept=".csv">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="import-students-btn">Upload Students</button>
+      </div>
+      <div id="import-students-result" class="mt1"></div>
+    </div>
+
+    <div class="card">
+      <h2>Import Teams</h2>
+      <p class="text-sub" style="margin-bottom:.75rem">
+        CSV columns: <code>team_number, team_name</code>
+      </p>
+      <input type="file" id="import-teams-file" accept=".csv">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="import-teams-btn">Upload Teams</button>
+      </div>
+      <div id="import-teams-result" class="mt1"></div>
+    </div>
+
+    <div class="card">
+      <h2>Import Assignments</h2>
+      <p class="text-sub" style="margin-bottom:.75rem">
+        CSV columns: <code>assignment_number, title, open_date, due_date, token_value</code>
+      </p>
+      <input type="file" id="import-assignments-file" accept=".csv">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="import-assignments-btn">Upload Assignments</button>
+      </div>
+      <div id="import-assignments-result" class="mt1"></div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Manage ─────────────────────────────────────────────────── -->
+  <div id="tab-manage" class="hidden">
+    <div class="card">
+      <h2>Students</h2>
+      <div class="btn-row" style="margin-bottom:1rem">
+        <button class="btn btn-secondary btn-sm" id="refresh-students">↻ Refresh</button>
+      </div>
+      <div id="students-table-wrap">Loading…</div>
+    </div>
+    <div class="card">
+      <h2>Teams</h2>
+      <div class="btn-row" style="margin-bottom:1rem">
+        <button class="btn btn-secondary btn-sm" id="refresh-teams">↻ Refresh</button>
+      </div>
+      <div id="teams-table-wrap">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Reports ────────────────────────────────────────────────── -->
+  <div id="tab-reports" class="hidden">
+    <div class="card">
+      <h2>Student Report</h2>
+      <label for="report-student-select">Select Student</label>
+      <select id="report-student-select">
+        <option value="">— choose —</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" id="run-student-report">View Report</button>
+        <button class="btn btn-secondary btn-sm" id="export-student-csv">Export CSV</button>
+      </div>
+      <div id="student-report-output" class="mt1"></div>
+    </div>
+
+    <div class="card">
+      <h2>Advisor Report</h2>
+      <label for="report-advisor-select">Select Advisor</label>
+      <select id="report-advisor-select">
+        <option value="">— choose —</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" id="run-advisor-report">View Report</button>
+        <button class="btn btn-secondary btn-sm" id="export-advisor-csv">Export CSV</button>
+      </div>
+      <div id="advisor-report-output" class="mt1"></div>
+    </div>
+
+    <div class="card">
+      <h2>Team Report</h2>
+      <label for="report-team-select">Select Team</label>
+      <select id="report-team-select">
+        <option value="">— choose —</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" id="run-team-report">View Report</button>
+        <button class="btn btn-secondary btn-sm" id="export-team-csv">Export CSV</button>
+      </div>
+      <div id="team-report-output" class="mt1"></div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Assignments ─────────────────────────────────────────────── -->
+  <div id="tab-assignments" class="hidden">
+    <div class="card">
+      <h2>Create / Edit Assignment</h2>
+      <input type="hidden" id="assignment-id">
+      <label>Assignment Number</label>
+      <input type="number" id="assignment-number" min="1">
+      <label>Title</label>
+      <input type="text" id="assignment-title">
+      <label>Open Date</label>
+      <input type="datetime-local" id="assignment-open">
+      <label>Due Date</label>
+      <input type="datetime-local" id="assignment-due">
+      <label>Token Value</label>
+      <input type="number" id="assignment-tokens" min="1" value="10">
+      <label>
+        <input type="checkbox" id="assignment-active"> Active
+      </label>
+      <div class="btn-row mt1">
+        <button class="btn btn-primary" id="save-assignment-btn">Save Assignment</button>
+        <button class="btn btn-secondary" id="clear-assignment-btn">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>All Assignments</h2>
+      <button class="btn btn-secondary btn-sm" id="refresh-assignments">↻ Refresh</button>
+      <div id="assignments-table-wrap" class="mt1">Loading…</div>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<script type="module">
+import { Auth, AdminImport, AdminReports, AdminManage } from '../js/api.js';
+
+// ── Logout ───────────────────────────────────────────────────────────────────
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await Auth.logout(); window.location.href = '../index.html';
+});
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('hidden'));
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+
+    // Lazy-load data
+    if (btn.dataset.tab === 'manage')      loadManage();
+    if (btn.dataset.tab === 'reports')     loadReportSelects();
+    if (btn.dataset.tab === 'assignments') loadAssignments();
+  });
+});
+
+// ── CSV Imports ───────────────────────────────────────────────────────────────
+function setupImport(type, fileId, btnId, resultId) {
+  document.getElementById(btnId).addEventListener('click', async () => {
+    const file = document.getElementById(fileId).files[0];
+    if (!file) { alert('Please select a CSV file first.'); return; }
+    const res = document.getElementById(resultId);
+    res.innerHTML = 'Uploading…';
+    try {
+      const data = await AdminImport.upload(type, file);
+      res.innerHTML = `<span style="color:var(--success)">✅ ${data.created} record(s) imported.</span>`;
+    } catch (err) {
+      const errs = err.errors?.length ? '<ul>' + err.errors.map(e => `<li>${escHtml(e)}</li>`).join('') + '</ul>' : '';
+      res.innerHTML = `<span style="color:var(--danger)">Error: ${escHtml(err.message)}</span>${errs}`;
+    }
+  });
+}
+setupImport('students',    'import-students-file',    'import-students-btn',    'import-students-result');
+setupImport('teams',       'import-teams-file',       'import-teams-btn',       'import-teams-result');
+setupImport('assignments', 'import-assignments-file', 'import-assignments-btn', 'import-assignments-result');
+
+// ── Manage tab ────────────────────────────────────────────────────────────────
+async function loadManage() {
+  // Students
+  try {
+    const students = await AdminManage.list('student');
+    document.getElementById('students-table-wrap').innerHTML = buildTable(
+      students,
+      ['name','netid','team_number','team_name'],
+      ['Name','NetID','Team #','Team Name']
+    );
+  } catch { document.getElementById('students-table-wrap').textContent = 'Error loading students.'; }
+
+  // Teams
+  try {
+    const teams = await AdminManage.list('team');
+    document.getElementById('teams-table-wrap').innerHTML = buildTable(
+      teams,
+      ['team_number','team_name'],
+      ['Team #','Team Name']
+    );
+  } catch { document.getElementById('teams-table-wrap').textContent = 'Error loading teams.'; }
+}
+
+document.getElementById('refresh-students').addEventListener('click', loadManage);
+document.getElementById('refresh-teams').addEventListener('click', loadManage);
+
+// ── Reports tab ───────────────────────────────────────────────────────────────
+async function loadReportSelects() {
+  try {
+    const [students, advisors, teams] = await Promise.all([
+      AdminReports.listStudents(), AdminReports.listAdvisors(), AdminReports.listTeams()
+    ]);
+    populateSelect('report-student-select', students, 'id', s => `${s.name} (${s.netid})`);
+    populateSelect('report-advisor-select', advisors,  'id', a => a.name);
+    populateSelect('report-team-select',    teams,     'id', t => `Team ${t.team_number}: ${t.team_name}`);
+  } catch (e) { console.error(e); }
+}
+
+document.getElementById('run-student-report').addEventListener('click', async () => {
+  const id = document.getElementById('report-student-select').value;
+  if (!id) return;
+  try {
+    const data = await AdminReports.student(id);
+    document.getElementById('student-report-output').innerHTML =
+      `<h3>${escHtml(data.student.name)} (${escHtml(data.student.netid)})</h3>` +
+      buildTable(data.assignments,
+        ['assignment_number','title','tokens_cast','tokens_received','is_final','has_warnings'],
+        ['Assignment','Title','Tokens Cast','Tokens Received','Final','Warnings']);
+  } catch(e) { alert(e.message); }
+});
+
+document.getElementById('export-student-csv').addEventListener('click', () => {
+  const id = document.getElementById('report-student-select').value;
+  if (id) AdminReports.exportCsv('student', id);
+});
+
+document.getElementById('run-advisor-report').addEventListener('click', async () => {
+  const id = document.getElementById('report-advisor-select').value;
+  if (!id) return;
+  try {
+    const data = await AdminReports.advisor(id);
+    document.getElementById('advisor-report-output').innerHTML =
+      `<h3>${escHtml(data.advisor.name)}</h3>` +
+      buildTable(data.grade_distribution,
+        ['assignment_number','grade','count'],
+        ['Assignment','Grade','Count']);
+  } catch(e) { alert(e.message); }
+});
+
+document.getElementById('export-advisor-csv').addEventListener('click', () => {
+  const id = document.getElementById('report-advisor-select').value;
+  if (id) AdminReports.exportCsv('advisor', id);
+});
+
+document.getElementById('run-team-report').addEventListener('click', async () => {
+  const id = document.getElementById('report-team-select').value;
+  if (!id) return;
+  try {
+    const data = await AdminReports.team(id);
+    document.getElementById('team-report-output').innerHTML =
+      buildTable(data.data,
+        ['name','netid','assignment_number','tokens_cast','tokens_received','is_final'],
+        ['Name','NetID','Assignment','Cast','Received','Final']);
+  } catch(e) { alert(e.message); }
+});
+
+document.getElementById('export-team-csv').addEventListener('click', () => {
+  const id = document.getElementById('report-team-select').value;
+  if (id) AdminReports.exportCsv('team', id);
+});
+
+// ── Assignments tab ───────────────────────────────────────────────────────────
+async function loadAssignments() {
+  try {
+    const list = await AdminManage.list('assignment');
+    const wrap = document.getElementById('assignments-table-wrap');
+    wrap.innerHTML = buildTable(list,
+      ['assignment_number','title','open_date','due_date','token_value','is_active'],
+      ['#','Title','Opens','Due','Tokens','Active']);
+  } catch { document.getElementById('assignments-table-wrap').textContent = 'Error.'; }
+}
+
+document.getElementById('refresh-assignments').addEventListener('click', loadAssignments);
+
+document.getElementById('save-assignment-btn').addEventListener('click', async () => {
+  const id = document.getElementById('assignment-id').value;
+  const body = {
+    assignment_number: parseInt(document.getElementById('assignment-number').value, 10),
+    title:       document.getElementById('assignment-title').value,
+    open_date:   document.getElementById('assignment-open').value,
+    due_date:    document.getElementById('assignment-due').value,
+    token_value: parseInt(document.getElementById('assignment-tokens').value, 10),
+    is_active:   document.getElementById('assignment-active').checked,
+  };
+  try {
+    if (id) {
+      await AdminManage.update('assignment', id, body);
+    } else {
+      await AdminManage.create('assignment', body);
+    }
+    clearAssignmentForm();
+    loadAssignments();
+  } catch(e) { alert(e.message); }
+});
+
+document.getElementById('clear-assignment-btn').addEventListener('click', clearAssignmentForm);
+function clearAssignmentForm() {
+  ['assignment-id','assignment-number','assignment-title','assignment-open',
+   'assignment-due','assignment-tokens'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('assignment-tokens').value = 10;
+  document.getElementById('assignment-active').checked = false;
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function buildTable(rows, fields, headers) {
+  if (!rows?.length) return '<p class="text-sub">No data.</p>';
+  return `<table class="data-table">
+    <thead><tr>${headers.map(h => `<th>${escHtml(h)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r =>
+      `<tr>${fields.map(f => `<td>${escHtml(String(r[f] ?? ''))}</td>`).join('')}</tr>`
+    ).join('')}</tbody>
+  </table>`;
+}
+
+function populateSelect(id, items, valField, labelFn) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">— choose —</option>' +
+    items.map(i => `<option value="${i[valField]}">${escHtml(labelFn(i))}</option>`).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

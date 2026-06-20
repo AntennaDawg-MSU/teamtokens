@@ -1,0 +1,288 @@
+/* frontend/css/style.css */
+
+/* ── Design tokens ─────────────────────────────────────────────────── */
+:root {
+  --navy:      #1a2744;
+  --navy-mid:  #2d3f6b;
+  --gold:      #c9a84c;
+  --gold-lt:   #f0d98a;
+  --bg:        #f5f6f8;
+  --surface:   #ffffff;
+  --border:    #dde1ea;
+  --text:      #1e2433;
+  --text-sub:  #5a6275;
+  --success:   #1e7e4c;
+  --warning:   #a06000;
+  --danger:    #b91c1c;
+  --radius:    8px;
+  --shadow:    0 2px 8px rgba(26,39,68,.10);
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+a { color: var(--navy-mid); }
+
+/* ── Layout ─────────────────────────────────────────────────────────── */
+.app-header {
+  background: var(--navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 58px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+.app-header .brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: .02em;
+  color: var(--gold-lt);
+}
+.app-header .user-info { font-size: .85rem; color: #b0bdd6; }
+.app-header .btn-logout {
+  background: none;
+  border: 1px solid rgba(255,255,255,.3);
+  color: #d0d8eb;
+  padding: .3rem .9rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: .85rem;
+}
+.app-header .btn-logout:hover { background: rgba(255,255,255,.1); }
+
+.page-wrap {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.card h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 1rem;
+  padding-bottom: .5rem;
+  border-bottom: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* ── Token Allocation ──────────────────────────────────────────────── */
+.teammate-row {
+  display: grid;
+  grid-template-columns: 1fr 160px 90px 72px;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.teammate-row:last-child { border-bottom: none; }
+.teammate-name { font-weight: 500; }
+.teammate-netid { font-size: .8rem; color: var(--text-sub); }
+
+.token-slider {
+  width: 100%;
+  accent-color: var(--navy-mid);
+}
+.token-num {
+  width: 70px;
+  padding: .35rem .5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: .95rem;
+  text-align: center;
+}
+.token-num:focus { outline: 2px solid var(--navy-mid); }
+
+.inc-dec {
+  display: flex;
+  gap: .25rem;
+}
+.inc-dec button {
+  width: 30px; height: 30px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.inc-dec button:hover { background: var(--navy-mid); }
+
+.token-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: .95rem;
+}
+.token-total { font-weight: 700; font-family: var(--font-mono); font-size: 1.1rem; }
+.token-total.ok    { color: var(--success); }
+.token-total.over  { color: var(--danger); }
+.token-total.under { color: var(--warning); }
+
+/* ── Advisor Grades ────────────────────────────────────────────────── */
+.advisor-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.advisor-row:last-child { border-bottom: none; }
+.advisor-name { flex: 1; font-weight: 500; }
+.grade-select {
+  padding: .35rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: .95rem;
+  background: var(--surface);
+}
+.grade-select:focus { outline: 2px solid var(--navy-mid); }
+
+/* ── Status bar ─────────────────────────────────────────────────────── */
+.status-bar {
+  padding: .75rem 1rem;
+  border-radius: var(--radius);
+  font-size: .9rem;
+  margin-bottom: 1rem;
+}
+.status-bar.ready   { background: #e6f4ed; color: var(--success); border: 1px solid #a3d8b8; }
+.status-bar.warning { background: #fff8e1; color: var(--warning); border: 1px solid #ffe082; }
+.status-bar.error   { background: #fde8e8; color: var(--danger);  border: 1px solid #f5a3a3; }
+
+.status-bar ul { margin: .4rem 0 0 1.2rem; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem 1.4rem;
+  border-radius: var(--radius);
+  border: none;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { background: var(--navy-mid); }
+.btn-secondary { background: var(--gold); color: var(--navy); }
+.btn-secondary:hover { background: var(--gold-lt); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: .3rem .8rem; font-size: .82rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
+
+/* ── Forms ──────────────────────────────────────────────────────────── */
+label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; color: var(--text-sub); }
+input[type=text], input[type=password], input[type=email],
+input[type=date], select, textarea {
+  width: 100%;
+  padding: .5rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: .95rem;
+  background: var(--surface);
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--navy-mid);
+  border-color: var(--navy-mid);
+}
+textarea { resize: vertical; min-height: 90px; }
+
+/* ── Login page ─────────────────────────────────────────────────────── */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy);
+}
+.login-card {
+  background: var(--surface);
+  padding: 2.5rem 2rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+}
+.login-card h1 {
+  font-size: 1.3rem;
+  margin-bottom: .25rem;
+  color: var(--navy);
+}
+.login-card .subtitle { font-size: .85rem; color: var(--text-sub); margin-bottom: 1.5rem; }
+
+/* ── Tables ─────────────────────────────────────────────────────────── */
+.data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.data-table th {
+  background: var(--navy);
+  color: #fff;
+  text-align: left;
+  padding: .6rem .8rem;
+  font-weight: 600;
+}
+.data-table td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); }
+.data-table tr:hover td { background: #f0f2f7; }
+
+/* ── Tabs (admin) ───────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+.tab-btn {
+  padding: .6rem 1.2rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.tab-btn.active {
+  color: var(--navy);
+  border-bottom-color: var(--gold);
+}
+
+/* ── Utility ─────────────────────────────────────────────────────────── */
+.hidden { display: none !important; }
+.mt1 { margin-top: 1rem; }
+.text-sub { color: var(--text-sub); font-size: .85rem; }
+
+@media (max-width: 600px) {
+  .teammate-row { grid-template-columns: 1fr 80px 60px 64px; gap: .5rem; }
+  .page-wrap { padding: 0 .75rem; }
+}

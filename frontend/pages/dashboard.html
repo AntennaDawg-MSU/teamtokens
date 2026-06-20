@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Tokens — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <span class="brand">🪙 Team Tokens</span>
+  <span class="user-info" id="header-user"></span>
+  <button class="btn-logout" id="logout-btn">Sign Out</button>
+</header>
+
+<div class="page-wrap">
+
+  <!-- Loading -->
+  <div id="loading" class="card" style="text-align:center;color:var(--text-sub)">
+    Loading your dashboard…
+  </div>
+
+  <!-- Main content (hidden until loaded) -->
+  <div id="main" class="hidden">
+
+    <!-- Team Info -->
+    <div class="card">
+      <h2>📋 Assignment</h2>
+      <div id="assignment-info"></div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar" class="status-bar error" style="margin-bottom:1rem"></div>
+
+    <!-- Token Allocation -->
+    <div class="card">
+      <h2>🪙 Token Allocation</h2>
+      <p class="text-sub" style="margin-bottom:1rem">
+        Distribute exactly <strong id="token-required">?</strong> tokens among your teammates.
+      </p>
+      <div id="teammate-list"></div>
+      <div class="token-summary">
+        <span>Total allocated:</span>
+        <span class="token-total" id="token-total-display">0</span>
+        <span id="token-total-label"></span>
+      </div>
+    </div>
+
+    <!-- Advisor Grades -->
+    <div class="card">
+      <h2>⭐ Advisor Evaluations</h2>
+      <div id="advisor-list"></div>
+    </div>
+
+    <!-- Advisor Meeting -->
+    <div class="card">
+      <h2>💬 Advisor Meeting</h2>
+      <label for="meeting-ans">Did your team meet with your advisor this week?
+        Briefly describe what was discussed.</label>
+      <textarea id="meeting-ans" rows="4" maxlength="2000"
+                placeholder="Describe your advisor meeting…"></textarea>
+    </div>
+
+    <!-- Comments -->
+    <div class="card">
+      <h2>📝 Comments</h2>
+      <label for="comments">Additional comments (required if warnings are present)</label>
+      <textarea id="comments" rows="4" maxlength="5000"
+                placeholder="Optional comments…"></textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="save-draft-btn">💾 Save Draft</button>
+      <button class="btn btn-primary"   id="submit-btn">✅ Final Submit</button>
+    </div>
+    <p class="text-sub mt1" id="submit-note"></p>
+
+  </div><!-- /main -->
+</div><!-- /page-wrap -->
+
+<script type="module">
+import { Auth, Student } from '../js/api.js';
+
+// ── State ───────────────────────────────────────────────────────────────────
+let dashData      = null;
+let tokenRequired = 0;
+// Map<recipient_id, tokens>
+const allocationMap = {};
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    dashData = await Student.getDashboard();
+  } catch (err) {
+    if (err.status === 401) {
+      window.location.href = '../index.html';
+      return;
+    }
+    showFatalError(err.message);
+    return;
+  }
+
+  const { team, teammates, advisors, assignment, draft } = dashData;
+
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('main').classList.remove('hidden');
+  document.getElementById('header-user').textContent =
+    `${dashData.name ?? ''} — Team ${team.team_number}: ${team.team_name}`;
+
+  if (!assignment) {
+    document.getElementById('assignment-info').innerHTML =
+      '<p class="text-sub">No assignment is currently open.</p>';
+    document.getElementById('save-draft-btn').disabled = true;
+    document.getElementById('submit-btn').disabled = true;
+    return;
+  }
+
+  tokenRequired = parseInt(assignment.token_value, 10);
+  document.getElementById('token-required').textContent = tokenRequired;
+
+  renderAssignment(assignment);
+  renderTeammates(teammates, draft);
+  renderAdvisors(advisors, draft);
+  restoreDraft(draft);
+  updateStatus();
+}
+
+// ── Render assignment info ───────────────────────────────────────────────────
+function renderAssignment(a) {
+  const due = new Date(a.due_date).toLocaleString();
+  document.getElementById('assignment-info').innerHTML = `
+    <p><strong>Assignment ${a.assignment_number}:</strong> ${escHtml(a.title ?? '')}</p>
+    <p class="text-sub">Due: ${due}</p>
+  `;
+}
+
+// ── Render token rows ─────────────────────────────────────────────────────────
+function renderTeammates(teammates, draft) {
+  const container = document.getElementById('teammate-list');
+  if (!teammates.length) {
+    container.innerHTML = '<p class="text-sub">No teammates found.</p>';
+    return;
+  }
+
+  // Pre-fill from draft
+  if (draft?.token_allocations) {
+    for (const a of draft.token_allocations) {
+      allocationMap[a.recipient_id] = a.tokens ?? 0;
+    }
+  } else {
+    // Default: distribute evenly
+    const share = Math.floor(tokenRequired / teammates.length);
+    teammates.forEach(t => { allocationMap[t.id] = share; });
+  }
+
+  container.innerHTML = teammates.map(t => `
+    <div class="teammate-row" data-id="${t.id}">
+      <div>
+        <div class="teammate-name">${escHtml(t.name)}</div>
+        <div class="teammate-netid">${escHtml(t.netid)}</div>
+      </div>
+      <input type="range" class="token-slider" min="0" max="${tokenRequired}"
+             value="${allocationMap[t.id] ?? 0}" data-id="${t.id}">
+      <input type="number" class="token-num" min="0" max="${tokenRequired}"
+             value="${allocationMap[t.id] ?? 0}" data-id="${t.id}">
+      <div class="inc-dec">
+        <button data-id="${t.id}" data-delta="-1">−</button>
+        <button data-id="${t.id}" data-delta="1">+</button>
+      </div>
+    </div>
+  `).join('');
+
+  // ── Sync the three controls ─────────────────────────────────────────────
+  container.addEventListener('input', (e) => {
+    const id = parseInt(e.target.dataset.id, 10);
+    if (!id) return;
+    const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+    setAllocation(id, val);
+  });
+
+  container.addEventListener('click', (e) => {
+    const delta = e.target.dataset.delta;
+    const id    = parseInt(e.target.dataset.id, 10);
+    if (!delta || !id) return;
+    setAllocation(id, (allocationMap[id] ?? 0) + parseInt(delta, 10));
+  });
+}
+
+function setAllocation(id, val) {
+  val = Math.max(0, val);
+  allocationMap[id] = val;
+  // Update all controls for this id
+  document.querySelectorAll(`[data-id="${id}"]`).forEach(el => {
+    if (el.tagName === 'INPUT') el.value = val;
+  });
+  updateStatus();
+}
+
+// ── Render advisor grade rows ─────────────────────────────────────────────────
+function renderAdvisors(advisors, draft) {
+  const container = document.getElementById('advisor-list');
+  if (!advisors.length) {
+    container.innerHTML = '<p class="text-sub">No advisors assigned.</p>';
+    return;
+  }
+
+  const savedGrades = {};
+  if (draft?.advisor_grades) {
+    draft.advisor_grades.forEach(g => { savedGrades[g.advisor_id] = g.grade; });
+  }
+
+  container.innerHTML = advisors.map(a => `
+    <div class="advisor-row">
+      <span class="advisor-name">${escHtml(a.name)}</span>
+      <select class="grade-select" data-advisor-id="${a.id}">
+        <option value="">— Select grade —</option>
+        ${['A','B','C','D','F'].map(g =>
+          `<option value="${g}" ${savedGrades[a.id] === g ? 'selected' : ''}>${g}</option>`
+        ).join('')}
+      </select>
+    </div>
+  `).join('');
+
+  container.addEventListener('change', updateStatus);
+}
+
+// ── Restore draft text fields ─────────────────────────────────────────────────
+function restoreDraft(draft) {
+  if (!draft) return;
+  document.getElementById('meeting-ans').value = draft.advisor_meeting_ans ?? '';
+  document.getElementById('comments').value    = draft.comments ?? '';
+  if (draft.is_final) {
+    document.getElementById('submit-btn').disabled  = true;
+    document.getElementById('save-draft-btn').disabled = true;
+    document.getElementById('submit-note').textContent =
+      'This submission is final. Contact your instructor to reopen it.';
+  }
+}
+
+// ── Validation & status ───────────────────────────────────────────────────────
+function collectPayload() {
+  const token_allocations = Object.entries(allocationMap).map(([recipient_id, tokens]) => ({
+    recipient_id: parseInt(recipient_id, 10),
+    tokens: parseInt(tokens, 10),
+  }));
+
+  const advisor_grades = [...document.querySelectorAll('.grade-select')]
+    .filter(s => s.value)
+    .map(s => ({ advisor_id: parseInt(s.dataset.advisorId, 10), grade: s.value }));
+
+  return {
+    assignment_id:      dashData.assignment.id,
+    token_allocations,
+    advisor_grades,
+    advisor_meeting_ans: document.getElementById('meeting-ans').value.trim(),
+    comments:            document.getElementById('comments').value.trim(),
+  };
+}
+
+function validate(payload) {
+  const errors   = [];
+  const warnings = [];
+
+  const total = payload.token_allocations.reduce((s, a) => s + a.tokens, 0);
+  if (total !== tokenRequired) {
+    errors.push(`Total tokens must equal ${tokenRequired} (currently ${total}).`);
+  }
+
+  const advisorCount = document.querySelectorAll('.grade-select').length;
+  if (payload.advisor_grades.length < advisorCount) {
+    errors.push('All advisor grades must be selected.');
+  }
+
+  if (!payload.advisor_meeting_ans) {
+    errors.push('Advisor meeting answer is required.');
+  }
+
+  // Warnings
+  const avg = tokenRequired / (payload.token_allocations.length || 1);
+  for (const a of payload.token_allocations) {
+    if (a.tokens < avg * 0.5) {
+      warnings.push('One or more teammates received a significantly low token allocation.');
+      break;
+    }
+  }
+  for (const g of payload.advisor_grades) {
+    if (['D','F'].includes(g.grade)) {
+      warnings.push('One or more advisors received a low grade (D or F).');
+      break;
+    }
+  }
+  if (warnings.length && !payload.comments) {
+    errors.push('Comments are required when warnings are present.');
+  }
+
+  return { errors, warnings };
+}
+
+function updateStatus() {
+  const payload  = collectPayload();
+  const { errors, warnings } = validate(payload);
+  const bar      = document.getElementById('status-bar');
+  const total    = payload.token_allocations.reduce((s, a) => s + a.tokens, 0);
+  const totalEl  = document.getElementById('token-total-display');
+
+  totalEl.textContent = total;
+  totalEl.className = 'token-total ' + (total === tokenRequired ? 'ok' : total > tokenRequired ? 'over' : 'under');
+
+  const submitBtn = document.getElementById('submit-btn');
+
+  if (errors.length) {
+    bar.className = 'status-bar error';
+    bar.innerHTML = '<strong>Please fix these issues:</strong><ul>' +
+      errors.map(e => `<li>${escHtml(e)}</li>`).join('') + '</ul>';
+    submitBtn.disabled = true;
+  } else if (warnings.length) {
+    bar.className = 'status-bar warning';
+    bar.innerHTML = '<strong>⚠ Warnings:</strong><ul>' +
+      warnings.map(w => `<li>${escHtml(w)}</li>`).join('') + '</ul>';
+    submitBtn.disabled = false;
+  } else {
+    bar.className = 'status-bar ready';
+    bar.textContent = '✅ Ready to submit.';
+    submitBtn.disabled = false;
+  }
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+async function doSubmit(isFinal) {
+  const payload = { ...collectPayload(), is_final: isFinal };
+  const btn = isFinal
+    ? document.getElementById('submit-btn')
+    : document.getElementById('save-draft-btn');
+  btn.disabled = true;
+  btn.textContent = isFinal ? 'Submitting…' : 'Saving…';
+
+  try {
+    await (isFinal ? Student.finalSubmit(payload) : Student.saveDraft(payload));
+    if (isFinal) {
+      document.getElementById('submit-note').textContent =
+        '✅ Final submission recorded. You cannot edit it further.';
+      document.getElementById('submit-btn').textContent = '✅ Submitted';
+      document.getElementById('save-draft-btn').disabled = true;
+    } else {
+      btn.disabled = false;
+      btn.textContent = '💾 Save Draft';
+      document.getElementById('submit-note').textContent = 'Draft saved.';
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = isFinal ? '✅ Final Submit' : '💾 Save Draft';
+    alert('Error: ' + err.message);
+  }
+}
+
+document.getElementById('save-draft-btn').addEventListener('click', () => doSubmit(false));
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  if (!confirm('Are you sure? Final submissions cannot be edited.')) return;
+  doSubmit(true);
+});
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await Auth.logout();
+  window.location.href = '../index.html';
+});
+
+// ── Util ─────────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showFatalError(msg) {
+  document.getElementById('loading').innerHTML =
+    `<p style="color:var(--danger)">Error: ${escHtml(msg)}</p>`;
+}
+
+boot();
+</script>
+</body>
+</html>
