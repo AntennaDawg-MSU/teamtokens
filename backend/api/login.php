@@ -1,5 +1,4 @@
 <?php
-// backend/api/login.php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
 
@@ -17,20 +16,17 @@ if ($netid === '' || $shibboleth === '') {
     json_error('NetID and Shibboleth code are required');
 }
 
-session_start_secure();
-$result = login($netid, $shibboleth);
-
-if ($result === false) {
-    json_error('Invalid NetID or Shibboleth code, or no assignment is currently open', 401);
-}
-
-// Student already submitted — locked out
-if (isset($result['locked']) && $result['locked']) {
-    json_error('You have already submitted this assignment. You will be able to log in again when the next assignment opens.', 403);
-}
+// Temporary debug — look up user directly
+$db   = get_db();
+$stmt = $db->prepare('SELECT id, netid, role, shibboleth_hash FROM users WHERE netid = ?');
+$stmt->execute([$netid]);
+$user = $stmt->fetch();
 
 json_ok([
-    'name' => $result['name'],
-    'netid' => $result['netid'],
-    'role'  => $result['role'],
+    'user_found'       => $user ? true : false,
+    'role'             => $user['role'] ?? null,
+    'has_hash'         => !empty($user['shibboleth_hash']),
+    'hash_prefix'      => $user ? substr($user['shibboleth_hash'], 0, 7) : null,
+    'verify_result'    => $user ? password_verify($shibboleth, $user['shibboleth_hash']) : false,
+    'shibboleth_length'=> strlen($shibboleth),
 ]);
