@@ -10,12 +10,12 @@ $db = get_db();
 
 $type = $_GET['type'] ?? '';
 
-// ── Admin Shibboleth update (JSON POST, not CSV) ──────────────────────────────
+// ── Admin Shibboleth update ───────────────────────────────────────────────────
 if ($type === 'admin_shibboleth') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { json_error('Method not allowed', 405); }
-    $b          = json_body();
-    $session    = require_admin();
-    $new_shib   = sanitise_string($b['shibboleth'] ?? '', 255);
+    $b        = json_body();
+    $session  = require_admin();
+    $new_shib = sanitise_string($b['shibboleth'] ?? '', 255);
     if ($new_shib === '') { json_error('Shibboleth code cannot be empty'); }
     update_admin_shibboleth((int)$session['user_id'], $new_shib);
     json_ok('Admin shibboleth updated');
@@ -29,13 +29,16 @@ $created = 0;
 
 // ─────────────────────────────────────────────
 // STUDENT IMPORT
-// Fields: name, netid, team_number
+// Required columns: name, netid, team_number
+// Optional columns: shibboleth_1, shibboleth_2, ... shibboleth_N (any number)
 // ─────────────────────────────────────────────
 if ($type === 'students') {
     foreach ($rows as $i => $row) {
         $line = $i + 2;
-        foreach (['name','netid','team_number'] as $f) {
-            if (empty($row[$f])) { $errors[] = "Row $line: missing '$f'"; }
+        foreach (['name', 'netid', 'team_number'] as $f) {
+            if (empty($row[$f])) {
+                $errors[] = "Row $line: missing '$f'";
+            }
         }
         if (!empty($errors)) { continue; }
 
@@ -43,6 +46,7 @@ if ($type === 'students') {
         $name        = sanitise_string($row['name']);
         $team_number = sanitise_int($row['team_number']);
 
+        // Resolve team
         $stmt = $db->prepare('SELECT id FROM teams WHERE team_number = ?');
         $stmt->execute([$team_number]);
         $team = $stmt->fetch();
@@ -51,21 +55,46 @@ if ($type === 'students') {
             continue;
         }
 
-        // Students have no shibboleth_hash — they use the assignment shibboleth
+        // Upsert student user (no shibboleth_hash — uses per-assignment table)
         $stmt = $db->prepare(
             'INSERT INTO users (netid, name, team_id, role)
              VALUES (?, ?, ?, \'student\')
-             ON CONFLICT (netid) DO UPDATE SET name = EXCLUDED.name, team_id = EXCLUDED.team_id'
+             ON CONFLICT (netid) DO UPDATE
+             SET name = EXCLUDED.name, team_id = EXCLUDED.team_id
+             RETURNING id'
         );
         $stmt->execute([$netid, $name, $team['id']]);
+        $student_id = $stmt->fetchColumn();
         $created++;
+
+        // Insert shibboleths for each shibboleth_N column found in the row
+        foreach ($row as $col => $val) {
+            // Match columns named shibboleth_1, shibboleth_2, etc.
+            if (!preg_match('/^shibboleth_(\d+)$/i', $col, $matches)) {
+                continue;
+            }
+            $assignment_number = (int) $matches[1];
+            $shib_value        = sanitise_string($val, 255);
+
+            if ($shib_value === '') {
+                continue; // Skip blank shibboleth columns
+            }
+
+            $stmt = $db->prepare(
+                'INSERT INTO student_shibboleths (student_id, assignment_number, shibboleth)
+                 VALUES (?, ?, ?)
+                 ON CONFLICT (student_id, assignment_number)
+                 DO UPDATE SET shibboleth = EXCLUDED.shibboleth'
+            );
+            $stmt->execute([$student_id, $assignment_number, $shib_value]);
+        }
     }
 }
 
 // ─────────────────────────────────────────────
 // TEAM IMPORT
-// Fields: team_number, team_name, advisor_1_netid, advisor_2_netid, advisor_3_netid
-// Advisor columns are optional
+// Required: team_number, team_name
+// Optional: advisor_1_netid, advisor_2_netid, advisor_3_netid
 // ─────────────────────────────────────────────
 elseif ($type === 'teams') {
     foreach ($rows as $i => $row) {
@@ -99,7 +128,6 @@ elseif ($type === 'teams') {
             $advisor = $stmt->fetch();
 
             if (!$advisor) {
-                // Create advisor with just netid — name can be updated later
                 $stmt = $db->prepare(
                     'INSERT INTO users (netid, name, role)
                      VALUES (?, ?, \'advisor\')
@@ -110,12 +138,11 @@ elseif ($type === 'teams') {
                 $advisor_id = $stmt->fetchColumn();
             } else {
                 $advisor_id = $advisor['id'];
-                // Make sure they have advisor role
                 $db->prepare('UPDATE users SET role = \'advisor\' WHERE id = ?')
                    ->execute([$advisor_id]);
             }
 
-            // Link advisor to team (ignore if already linked)
+            // Link advisor to team
             $stmt = $db->prepare(
                 'INSERT INTO team_advisors (team_id, advisor_id)
                  VALUES (?, ?)
@@ -128,13 +155,16 @@ elseif ($type === 'teams') {
 
 // ─────────────────────────────────────────────
 // ASSIGNMENT IMPORT
-// Fields: assignment_number, title, open_date, due_date, token_value, shibboleth
+// Required: assignment_number, title, open_date, due_date, token_value
+// shibboleth column optional (assignment-level, not used for student login)
 // ─────────────────────────────────────────────
 elseif ($type === 'assignments') {
     foreach ($rows as $i => $row) {
         $line = $i + 2;
-        foreach (['assignment_number','open_date','due_date','token_value','shibboleth'] as $f) {
-            if (empty($row[$f])) { $errors[] = "Row $line: missing '$f'"; }
+        foreach (['assignment_number', 'open_date', 'due_date', 'token_value'] as $f) {
+            if (empty($row[$f])) {
+                $errors[] = "Row $line: missing '$f'";
+            }
         }
         if (!empty($errors)) { continue; }
 
@@ -154,7 +184,7 @@ elseif ($type === 'assignments') {
             $row['open_date'],
             $row['due_date'],
             sanitise_int($row['token_value']),
-            sanitise_string($row['shibboleth'], 255),
+            sanitise_string($row['shibboleth'] ?? '', 255),
         ]);
         $created++;
     }
