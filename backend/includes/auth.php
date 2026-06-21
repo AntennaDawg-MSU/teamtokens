@@ -19,7 +19,7 @@ function session_start_secure(): void {
 }
 
 function login(string $netid, string $shibboleth): array|false {
-    $db   = get_db();
+    $db = get_db();
 
     $stmt = $db->prepare('SELECT * FROM users WHERE netid = ?');
     $stmt->execute([$netid]);
@@ -29,7 +29,7 @@ function login(string $netid, string $shibboleth): array|false {
         return false;
     }
 
-    // ── Admin / instructor ────────────────────────────────────────────────────
+    // ── Admin / instructor login ──────────────────────────────────────────────
     if (in_array($user['role'], ['administrator', 'instructor'], true)) {
         if (empty($user['shibboleth_hash'])) {
             return false;
@@ -37,7 +37,6 @@ function login(string $netid, string $shibboleth): array|false {
         if (!password_verify($shibboleth, $user['shibboleth_hash'])) {
             return false;
         }
-        // Admin verified — start session and return
         session_start_secure();
         session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
@@ -48,7 +47,9 @@ function login(string $netid, string $shibboleth): array|false {
         return $user;
     }
 
-    // ── Student / advisor ─────────────────────────────────────────────────────
+    // ── Student / advisor login ───────────────────────────────────────────────
+
+    // Find currently active assignment
     $stmt = $db->prepare(
         'SELECT * FROM assignments
          WHERE is_active = TRUE
@@ -64,10 +65,23 @@ function login(string $netid, string $shibboleth): array|false {
         return false;
     }
 
-    if (!hash_equals($assignment['shibboleth'], $shibboleth)) {
+    // Look up this student's shibboleth for the active assignment number
+    $stmt = $db->prepare(
+        'SELECT shibboleth FROM student_shibboleths
+         WHERE student_id = ? AND assignment_number = ?'
+    );
+    $stmt->execute([$user['id'], $assignment['assignment_number']]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
         return false;
     }
 
+    if (!hash_equals($row['shibboleth'], $shibboleth)) {
+        return false;
+    }
+
+    // Check if student already finally submitted
     $stmt = $db->prepare(
         'SELECT is_final FROM submissions
          WHERE student_id = ? AND assignment_id = ?'
@@ -79,15 +93,15 @@ function login(string $netid, string $shibboleth): array|false {
         return ['locked' => true, 'name' => $user['name']];
     }
 
-    // Student verified — start session and return
     session_start_secure();
     session_regenerate_id(true);
-    $_SESSION['user_id']       = $user['id'];
-    $_SESSION['netid']         = $user['netid'];
-    $_SESSION['role']          = $user['role'];
-    $_SESSION['name']          = $user['name'];
-    $_SESSION['team_id']       = $user['team_id'] ?? null;
-    $_SESSION['assignment_id'] = $assignment['id'];
+    $_SESSION['user_id']           = $user['id'];
+    $_SESSION['netid']             = $user['netid'];
+    $_SESSION['role']              = $user['role'];
+    $_SESSION['name']              = $user['name'];
+    $_SESSION['team_id']           = $user['team_id'] ?? null;
+    $_SESSION['assignment_id']     = $assignment['id'];
+    $_SESSION['assignment_number'] = $assignment['assignment_number'];
     return $user;
 }
 
