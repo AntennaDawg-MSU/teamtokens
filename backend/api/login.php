@@ -16,7 +16,6 @@ if ($netid === '' || $shibboleth === '') {
     json_error('NetID and Shibboleth code are required');
 }
 
-session_start_secure();
 $result = login($netid, $shibboleth);
 
 if ($result === false) {
