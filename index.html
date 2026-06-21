@@ -52,9 +52,9 @@ form.addEventListener('submit', async (e) => {
     const user = await Auth.login(netid, password);
     // Redirect based on role
     if (user.role === 'administrator' || user.role === 'instructor') {
-      window.location.href = 'pages/admin.html';
+      window.location.href = 'frontend/pages/admin.html';
     } else {
-      window.location.href = 'pages/dashboard.html';
+      window.location.href = 'frontend/pages/dashboard.html';
     }
   } catch (err) {
     errBox.textContent = err.message;
