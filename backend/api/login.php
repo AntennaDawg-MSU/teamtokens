@@ -9,22 +9,28 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_error('Method not allowed', 405);
 }
 
-$body   = json_body();
-$netid  = sanitise_netid($body['netid'] ?? '');
-$pass   = $body['password'] ?? '';
+$body       = json_body();
+$netid      = sanitise_netid($body['netid']      ?? '');
+$shibboleth = sanitise_string($body['shibboleth'] ?? '', 255);
 
-if ($netid === '' || $pass === '') {
-    json_error('NetID and password are required');
+if ($netid === '' || $shibboleth === '') {
+    json_error('NetID and Shibboleth code are required');
 }
 
-$user = login($netid, $pass);
-if (!$user) {
-    json_error('Invalid NetID or password', 401);
+session_start_secure();
+$result = login($netid, $shibboleth);
+
+if ($result === false) {
+    json_error('Invalid NetID or Shibboleth code, or no assignment is currently open', 401);
+}
+
+// Student already submitted — locked out
+if (isset($result['locked']) && $result['locked']) {
+    json_error('You have already submitted this assignment. You will be able to log in again when the next assignment opens.', 403);
 }
 
 json_ok([
-    'name'       => $user['name'],
-    'netid'      => $user['netid'],
-    'role'       => $user['role'],
-    'must_reset' => (bool) $user['must_reset'],
+    'name' => $result['name'],
+    'netid' => $result['netid'],
+    'role'  => $result['role'],
 ]);
