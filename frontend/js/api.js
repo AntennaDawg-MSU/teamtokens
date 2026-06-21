@@ -1,7 +1,7 @@
 // frontend/js/api.js
 // Central API client. All fetch calls go through here.
 
-const API_BASE = 'https://teamtokens.onrender.com'; // ← update before deploy
+const API_BASE = 'https://teamtokens.onrender.com/api'; // ← update before deploy
 
 async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
