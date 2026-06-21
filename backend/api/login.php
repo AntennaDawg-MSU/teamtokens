@@ -16,21 +16,19 @@ if ($netid === '' || $shibboleth === '') {
     json_error('NetID and Shibboleth code are required');
 }
 
-$db   = get_db();
-$stmt = $db->prepare('SELECT * FROM users WHERE netid = ?');
-$stmt->execute([$netid]);
-$user = $stmt->fetch();
+session_start_secure();
+$result = login($netid, $shibboleth);
 
-if (!$user) {
-    json_error('User not found', 401);
+if ($result === false) {
+    json_error('Invalid NetID or Shibboleth code, or no assignment is currently open', 401);
 }
 
-$verify = password_verify($shibboleth, $user['shibboleth_hash']);
+if (isset($result['locked']) && $result['locked']) {
+    json_error('You have already submitted this assignment. You will be able to log in again when the next assignment opens.', 403);
+}
 
 json_ok([
-    'role'          => $user['role'],
-    'verify'        => $verify,
-    'shib_received' => $shibboleth,
-    'shib_length'   => strlen($shibboleth),
-    'hash_stored'   => substr($user['shibboleth_hash'], 0, 10) . '...',
+    'name' => $result['name'],
+    'netid' => $result['netid'],
+    'role'  => $result['role'],
 ]);
