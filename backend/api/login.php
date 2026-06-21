@@ -16,17 +16,21 @@ if ($netid === '' || $shibboleth === '') {
     json_error('NetID and Shibboleth code are required');
 }
 
-// Temporary debug — look up user directly
 $db   = get_db();
-$stmt = $db->prepare('SELECT id, netid, role, shibboleth_hash FROM users WHERE netid = ?');
+$stmt = $db->prepare('SELECT * FROM users WHERE netid = ?');
 $stmt->execute([$netid]);
 $user = $stmt->fetch();
 
+if (!$user) {
+    json_error('User not found', 401);
+}
+
+$verify = password_verify($shibboleth, $user['shibboleth_hash']);
+
 json_ok([
-    'user_found'       => $user ? true : false,
-    'role'             => $user['role'] ?? null,
-    'has_hash'         => !empty($user['shibboleth_hash']),
-    'hash_prefix'      => $user ? substr($user['shibboleth_hash'], 0, 7) : null,
-    'verify_result'    => $user ? password_verify($shibboleth, $user['shibboleth_hash']) : false,
-    'shibboleth_length'=> strlen($shibboleth),
+    'role'          => $user['role'],
+    'verify'        => $verify,
+    'shib_received' => $shibboleth,
+    'shib_length'   => strlen($shibboleth),
+    'hash_stored'   => substr($user['shibboleth_hash'], 0, 10) . '...',
 ]);
