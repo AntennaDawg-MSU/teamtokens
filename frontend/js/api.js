@@ -1,12 +1,10 @@
 // frontend/js/api.js
-// Central API client. All fetch calls go through here.
-
-const API_BASE = 'https://teamtokens.onrender.com/api'; // ← update before deploy
+const API_BASE = 'https://teamtokens.onrender.com/api';
 
 async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
   const res = await fetch(url, {
-    credentials: 'include',           // send session cookie
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
   });
@@ -14,10 +12,10 @@ async function apiFetch(path, options = {}) {
   const data = await res.json().catch(() => ({ ok: false, error: 'Invalid server response' }));
 
   if (!res.ok || !data.ok) {
-    const err = new Error(data.error || `HTTP ${res.status}`);
-    err.status  = res.status;
-    err.errors  = data.errors  || [];
-    err.warnings = data.warnings || [];
+    const err      = new Error(data.error || `HTTP ${res.status}`);
+    err.status     = res.status;
+    err.errors     = data.errors   || [];
+    err.warnings   = data.warnings || [];
     throw err;
   }
 
@@ -26,8 +24,8 @@ async function apiFetch(path, options = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const Auth = {
-  login:  (netid, password) =>
-    apiFetch('/login.php', { method: 'POST', body: JSON.stringify({ netid, password }) }),
+  login:  (netid, shibboleth) =>
+    apiFetch('/login.php', { method: 'POST', body: JSON.stringify({ netid, shibboleth }) }),
   logout: () => apiFetch('/logout.php', { method: 'POST' }),
 };
 
@@ -48,33 +46,40 @@ export const AdminImport = {
     return apiFetch(`/admin/import.php?type=${type}`, {
       method: 'POST',
       body: fd,
-      headers: {},  // let browser set multipart boundary
+      headers: {},
     });
   },
+  updateAdminShibboleth: (shibboleth) =>
+    apiFetch('/admin/import.php?type=admin_shibboleth', {
+      method: 'POST',
+      body: JSON.stringify({ shibboleth }),
+    }),
 };
 
 // ── Admin: reports ────────────────────────────────────────────────────────────
 export const AdminReports = {
-  student:     (id)         => apiFetch(`/admin/reports.php?type=student&id=${id}`),
-  advisor:     (id)         => apiFetch(`/admin/reports.php?type=advisor&id=${id}`),
-  team:        (id)         => apiFetch(`/admin/reports.php?type=team&id=${id}`),
-  listStudents: ()          => apiFetch('/admin/reports.php?type=list_students'),
-  listAdvisors: ()          => apiFetch('/admin/reports.php?type=list_advisors'),
-  listTeams:    ()          => apiFetch('/admin/reports.php?type=list_teams'),
-  exportCsv:   (type, id)  =>
+  student:      (id) => apiFetch(`/admin/reports.php?type=student&id=${id}`),
+  advisor:      (id) => apiFetch(`/admin/reports.php?type=advisor&id=${id}`),
+  team:         (id) => apiFetch(`/admin/reports.php?type=team&id=${id}`),
+  listStudents: ()   => apiFetch('/admin/reports.php?type=list_students'),
+  listAdvisors: ()   => apiFetch('/admin/reports.php?type=list_advisors'),
+  listTeams:    ()   => apiFetch('/admin/reports.php?type=list_teams'),
+  exportCsv: (type, id) =>
     window.open(`${API_BASE}/admin/reports.php?type=${type}&id=${id}&export=csv`, '_blank'),
 };
 
 // ── Admin: manage ─────────────────────────────────────────────────────────────
 export const AdminManage = {
-  list:   (entity)        => apiFetch(`/admin/manage.php?entity=${entity}`),
-  get:    (entity, id)    => apiFetch(`/admin/manage.php?entity=${entity}&id=${id}`),
-  create: (entity, body)  =>
+  list:   (entity)           => apiFetch(`/admin/manage.php?entity=${entity}`),
+  get:    (entity, id)       => apiFetch(`/admin/manage.php?entity=${entity}&id=${id}`),
+  create: (entity, body)     =>
     apiFetch(`/admin/manage.php?entity=${entity}`, { method: 'POST', body: JSON.stringify(body) }),
   update: (entity, id, body) =>
     apiFetch(`/admin/manage.php?entity=${entity}&id=${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  delete: (entity, id) =>
+  delete: (entity, id)       =>
     apiFetch(`/admin/manage.php?entity=${entity}&id=${id}`, { method: 'DELETE' }),
   reopenSubmission: (submission_id) =>
-    apiFetch('/admin/manage.php?entity=reopen_submission', { method: 'POST', body: JSON.stringify({ submission_id }) }),
+    apiFetch('/admin/manage.php?entity=reopen_submission', {
+      method: 'POST', body: JSON.stringify({ submission_id }),
+    }),
 };
