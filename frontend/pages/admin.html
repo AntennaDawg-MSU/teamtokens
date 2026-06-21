@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Team Tokens — Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400@600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -18,20 +18,38 @@
 
 <div class="page-wrap">
 
-  <!-- Tabs -->
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="import">📥 Import CSV</button>
     <button class="tab-btn" data-tab="manage">✏️ Manage Records</button>
     <button class="tab-btn" data-tab="reports">📊 Reports</button>
     <button class="tab-btn" data-tab="assignments">📅 Assignments</button>
+    <button class="tab-btn" data-tab="shibboleth">🔑 Shibboleths</button>
   </div>
 
   <!-- ── Tab: Import ─────────────────────────────────────────────────── -->
   <div id="tab-import">
     <div class="card">
+      <h2>Import Teams</h2>
+      <p class="text-sub" style="margin-bottom:.75rem">
+        CSV columns: <code>team_number, team_name, advisor_1_netid, advisor_2_netid, advisor_3_netid</code><br>
+        Advisor columns are optional — leave blank if not needed.
+      </p>
+      <p class="text-sub" style="margin-bottom:.75rem">Example:</p>
+      <pre style="background:#f5f6f8;padding:.75rem;border-radius:6px;font-size:.8rem;margin-bottom:1rem">team_number,team_name,advisor_1_netid,advisor_2_netid,advisor_3_netid
+1,Alpha Team,drsmith,,
+2,Beta Team,drjones,drwilliams,</pre>
+      <input type="file" id="import-teams-file" accept=".csv">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="import-teams-btn">Upload Teams</button>
+      </div>
+      <div id="import-teams-result" class="mt1"></div>
+    </div>
+
+    <div class="card">
       <h2>Import Student Roster</h2>
       <p class="text-sub" style="margin-bottom:.75rem">
-        CSV columns: <code>name, netid, team_number</code>
+        CSV columns: <code>name, netid, team_number</code><br>
+        Import teams first before importing students.
       </p>
       <input type="file" id="import-students-file" accept=".csv">
       <div class="btn-row">
@@ -41,22 +59,13 @@
     </div>
 
     <div class="card">
-      <h2>Import Teams</h2>
-      <p class="text-sub" style="margin-bottom:.75rem">
-        CSV columns: <code>team_number, team_name</code>
-      </p>
-      <input type="file" id="import-teams-file" accept=".csv">
-      <div class="btn-row">
-        <button class="btn btn-primary" id="import-teams-btn">Upload Teams</button>
-      </div>
-      <div id="import-teams-result" class="mt1"></div>
-    </div>
-
-    <div class="card">
       <h2>Import Assignments</h2>
       <p class="text-sub" style="margin-bottom:.75rem">
-        CSV columns: <code>assignment_number, title, open_date, due_date, token_value</code>
+        CSV columns: <code>assignment_number, title, open_date, due_date, token_value, shibboleth</code>
       </p>
+      <p class="text-sub" style="margin-bottom:.75rem">Example:</p>
+      <pre style="background:#f5f6f8;padding:.75rem;border-radius:6px;font-size:.8rem;margin-bottom:1rem">assignment_number,title,open_date,due_date,token_value,shibboleth
+1,Week 1,2024-09-09 00:00:00,2024-09-13 23:59:00,10,BULL2024W1</pre>
       <input type="file" id="import-assignments-file" accept=".csv">
       <div class="btn-row">
         <button class="btn btn-primary" id="import-assignments-btn">Upload Assignments</button>
@@ -88,9 +97,7 @@
     <div class="card">
       <h2>Student Report</h2>
       <label for="report-student-select">Select Student</label>
-      <select id="report-student-select">
-        <option value="">— choose —</option>
-      </select>
+      <select id="report-student-select"><option value="">— choose —</option></select>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" id="run-student-report">View Report</button>
         <button class="btn btn-secondary btn-sm" id="export-student-csv">Export CSV</button>
@@ -101,9 +108,7 @@
     <div class="card">
       <h2>Advisor Report</h2>
       <label for="report-advisor-select">Select Advisor</label>
-      <select id="report-advisor-select">
-        <option value="">— choose —</option>
-      </select>
+      <select id="report-advisor-select"><option value="">— choose —</option></select>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" id="run-advisor-report">View Report</button>
         <button class="btn btn-secondary btn-sm" id="export-advisor-csv">Export CSV</button>
@@ -114,9 +119,7 @@
     <div class="card">
       <h2>Team Report</h2>
       <label for="report-team-select">Select Team</label>
-      <select id="report-team-select">
-        <option value="">— choose —</option>
-      </select>
+      <select id="report-team-select"><option value="">— choose —</option></select>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" id="run-team-report">View Report</button>
         <button class="btn btn-secondary btn-sm" id="export-team-csv">Export CSV</button>
@@ -140,6 +143,8 @@
       <input type="datetime-local" id="assignment-due">
       <label>Token Value</label>
       <input type="number" id="assignment-tokens" min="1" value="10">
+      <label>Shibboleth Code</label>
+      <input type="text" id="assignment-shibboleth" placeholder="e.g. BULL2024W1">
       <label>
         <input type="checkbox" id="assignment-active"> Active
       </label>
@@ -148,11 +153,39 @@
         <button class="btn btn-secondary" id="clear-assignment-btn">Clear</button>
       </div>
     </div>
-
     <div class="card">
       <h2>All Assignments</h2>
       <button class="btn btn-secondary btn-sm" id="refresh-assignments">↻ Refresh</button>
       <div id="assignments-table-wrap" class="mt1">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Shibboleths ─────────────────────────────────────────────── -->
+  <div id="tab-shibboleth" class="hidden">
+    <div class="card">
+      <h2>🔑 Update Admin Shibboleth</h2>
+      <p class="text-sub" style="margin-bottom:1rem">
+        This is the code <strong>you</strong> use to log into the admin dashboard.
+        Change it whenever you like. Keep it somewhere safe — there is no recovery
+        other than updating it directly in the database via TablePlus.
+      </p>
+      <label for="admin-shib-input">New Admin Shibboleth Code</label>
+      <input type="text" id="admin-shib-input" placeholder="Enter new admin shibboleth">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="update-admin-shib-btn">Update Admin Shibboleth</button>
+      </div>
+      <div id="admin-shib-result" class="mt1"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Assignment Shibboleths</h2>
+      <p class="text-sub" style="margin-bottom:1rem">
+        These are the codes students use each week. They are set when you import
+        or create assignments. To change a shibboleth, edit the assignment in the
+        Assignments tab.
+      </p>
+      <button class="btn btn-secondary btn-sm" id="refresh-shibboleths">↻ Refresh</button>
+      <div id="shibboleth-table-wrap" class="mt1">Loading…</div>
     </div>
   </div>
 
@@ -161,9 +194,9 @@
 <script type="module">
 import { Auth, AdminImport, AdminReports, AdminManage } from '../js/api.js';
 
-// ── Logout ───────────────────────────────────────────────────────────────────
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  await Auth.logout(); window.location.href = '../index.html';
+  await Auth.logout();
+  window.location.href = '../../index.html';
 });
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
@@ -173,11 +206,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.add('active');
     document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('hidden'));
     document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
-
-    // Lazy-load data
     if (btn.dataset.tab === 'manage')      loadManage();
     if (btn.dataset.tab === 'reports')     loadReportSelects();
     if (btn.dataset.tab === 'assignments') loadAssignments();
+    if (btn.dataset.tab === 'shibboleth') loadShibboleths();
   });
 });
 
@@ -192,18 +224,49 @@ function setupImport(type, fileId, btnId, resultId) {
       const data = await AdminImport.upload(type, file);
       res.innerHTML = `<span style="color:var(--success)">✅ ${data.created} record(s) imported.</span>`;
     } catch (err) {
-      const errs = err.errors?.length ? '<ul>' + err.errors.map(e => `<li>${escHtml(e)}</li>`).join('') + '</ul>' : '';
+      const errs = err.errors?.length
+        ? '<ul>' + err.errors.map(e => `<li>${escHtml(e)}</li>`).join('') + '</ul>'
+        : '';
       res.innerHTML = `<span style="color:var(--danger)">Error: ${escHtml(err.message)}</span>${errs}`;
     }
   });
 }
-setupImport('students',    'import-students-file',    'import-students-btn',    'import-students-result');
 setupImport('teams',       'import-teams-file',       'import-teams-btn',       'import-teams-result');
+setupImport('students',    'import-students-file',    'import-students-btn',    'import-students-result');
 setupImport('assignments', 'import-assignments-file', 'import-assignments-btn', 'import-assignments-result');
+
+// ── Admin Shibboleth ──────────────────────────────────────────────────────────
+document.getElementById('update-admin-shib-btn').addEventListener('click', async () => {
+  const val = document.getElementById('admin-shib-input').value.trim();
+  const res = document.getElementById('admin-shib-result');
+  if (!val) { res.innerHTML = '<span style="color:var(--danger)">Please enter a shibboleth code.</span>'; return; }
+  if (!confirm('Are you sure? You will need this new code to log in next time.')) return;
+  try {
+    await AdminImport.updateAdminShibboleth(val);
+    res.innerHTML = '<span style="color:var(--success)">✅ Admin shibboleth updated. Use the new code on your next login.</span>';
+    document.getElementById('admin-shib-input').value = '';
+  } catch(e) {
+    res.innerHTML = `<span style="color:var(--danger)">Error: ${escHtml(e.message)}</span>`;
+  }
+});
+
+// ── Shibboleth tab — show assignment shibboleths ───────────────────────────────
+async function loadShibboleths() {
+  const wrap = document.getElementById('shibboleth-table-wrap');
+  try {
+    const list = await AdminManage.list('assignment');
+    if (!list?.length) { wrap.innerHTML = '<p class="text-sub">No assignments yet.</p>'; return; }
+    wrap.innerHTML = buildTable(
+      list,
+      ['assignment_number','title','open_date','due_date','shibboleth','is_active'],
+      ['#','Title','Opens','Due','Shibboleth Code','Active']
+    );
+  } catch { wrap.textContent = 'Error loading assignments.'; }
+}
+document.getElementById('refresh-shibboleths').addEventListener('click', loadShibboleths);
 
 // ── Manage tab ────────────────────────────────────────────────────────────────
 async function loadManage() {
-  // Students
   try {
     const students = await AdminManage.list('student');
     document.getElementById('students-table-wrap').innerHTML = buildTable(
@@ -213,17 +276,13 @@ async function loadManage() {
     );
   } catch { document.getElementById('students-table-wrap').textContent = 'Error loading students.'; }
 
-  // Teams
   try {
     const teams = await AdminManage.list('team');
     document.getElementById('teams-table-wrap').innerHTML = buildTable(
-      teams,
-      ['team_number','team_name'],
-      ['Team #','Team Name']
+      teams, ['team_number','team_name'], ['Team #','Team Name']
     );
   } catch { document.getElementById('teams-table-wrap').textContent = 'Error loading teams.'; }
 }
-
 document.getElementById('refresh-students').addEventListener('click', loadManage);
 document.getElementById('refresh-teams').addEventListener('click', loadManage);
 
@@ -236,7 +295,7 @@ async function loadReportSelects() {
     populateSelect('report-student-select', students, 'id', s => `${s.name} (${s.netid})`);
     populateSelect('report-advisor-select', advisors,  'id', a => a.name);
     populateSelect('report-team-select',    teams,     'id', t => `Team ${t.team_number}: ${t.team_name}`);
-  } catch (e) { console.error(e); }
+  } catch(e) { console.error(e); }
 }
 
 document.getElementById('run-student-report').addEventListener('click', async () => {
@@ -251,7 +310,6 @@ document.getElementById('run-student-report').addEventListener('click', async ()
         ['Assignment','Title','Tokens Cast','Tokens Received','Final','Warnings']);
   } catch(e) { alert(e.message); }
 });
-
 document.getElementById('export-student-csv').addEventListener('click', () => {
   const id = document.getElementById('report-student-select').value;
   if (id) AdminReports.exportCsv('student', id);
@@ -265,11 +323,9 @@ document.getElementById('run-advisor-report').addEventListener('click', async ()
     document.getElementById('advisor-report-output').innerHTML =
       `<h3>${escHtml(data.advisor.name)}</h3>` +
       buildTable(data.grade_distribution,
-        ['assignment_number','grade','count'],
-        ['Assignment','Grade','Count']);
+        ['assignment_number','grade','count'], ['Assignment','Grade','Count']);
   } catch(e) { alert(e.message); }
 });
-
 document.getElementById('export-advisor-csv').addEventListener('click', () => {
   const id = document.getElementById('report-advisor-select').value;
   if (id) AdminReports.exportCsv('advisor', id);
@@ -286,7 +342,6 @@ document.getElementById('run-team-report').addEventListener('click', async () =>
         ['Name','NetID','Assignment','Cast','Received','Final']);
   } catch(e) { alert(e.message); }
 });
-
 document.getElementById('export-team-csv').addEventListener('click', () => {
   const id = document.getElementById('report-team-select').value;
   if (id) AdminReports.exportCsv('team', id);
@@ -296,13 +351,13 @@ document.getElementById('export-team-csv').addEventListener('click', () => {
 async function loadAssignments() {
   try {
     const list = await AdminManage.list('assignment');
-    const wrap = document.getElementById('assignments-table-wrap');
-    wrap.innerHTML = buildTable(list,
-      ['assignment_number','title','open_date','due_date','token_value','is_active'],
-      ['#','Title','Opens','Due','Tokens','Active']);
+    document.getElementById('assignments-table-wrap').innerHTML = buildTable(
+      list,
+      ['assignment_number','title','open_date','due_date','token_value','shibboleth','is_active'],
+      ['#','Title','Opens','Due','Tokens','Shibboleth','Active']
+    );
   } catch { document.getElementById('assignments-table-wrap').textContent = 'Error.'; }
 }
-
 document.getElementById('refresh-assignments').addEventListener('click', loadAssignments);
 
 document.getElementById('save-assignment-btn').addEventListener('click', async () => {
@@ -313,26 +368,24 @@ document.getElementById('save-assignment-btn').addEventListener('click', async (
     open_date:   document.getElementById('assignment-open').value,
     due_date:    document.getElementById('assignment-due').value,
     token_value: parseInt(document.getElementById('assignment-tokens').value, 10),
+    shibboleth:  document.getElementById('assignment-shibboleth').value.trim(),
     is_active:   document.getElementById('assignment-active').checked,
   };
   try {
-    if (id) {
-      await AdminManage.update('assignment', id, body);
-    } else {
-      await AdminManage.create('assignment', body);
-    }
+    if (id) { await AdminManage.update('assignment', id, body); }
+    else    { await AdminManage.create('assignment', body); }
     clearAssignmentForm();
     loadAssignments();
   } catch(e) { alert(e.message); }
 });
-
 document.getElementById('clear-assignment-btn').addEventListener('click', clearAssignmentForm);
+
 function clearAssignmentForm() {
   ['assignment-id','assignment-number','assignment-title','assignment-open',
-   'assignment-due','assignment-tokens'].forEach(id => {
+   'assignment-due','assignment-shibboleth'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('assignment-tokens').value = 10;
+  document.getElementById('assignment-tokens').value  = 10;
   document.getElementById('assignment-active').checked = false;
 }
 
@@ -346,13 +399,11 @@ function buildTable(rows, fields, headers) {
     ).join('')}</tbody>
   </table>`;
 }
-
 function populateSelect(id, items, valField, labelFn) {
   const sel = document.getElementById(id);
   sel.innerHTML = '<option value="">— choose —</option>' +
     items.map(i => `<option value="${i[valField]}">${escHtml(labelFn(i))}</option>`).join('');
 }
-
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
