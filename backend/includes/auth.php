@@ -12,7 +12,7 @@ function session_start_secure(): void {
             'path'     => '/',
             'secure'   => true,
             'httponly' => true,
-            'samesite' => 'Strict',
+            'samesite' => 'None',
         ]);
         session_start();
     }
